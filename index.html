@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>MetalStream LIVE - Screen Share</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <style>
+        :root { --rojo: #e50914; --negro: #0a0a0a; --metal: #2c2c2c; }
+        body { background: var(--negro); color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; }
+        .header { background: linear-gradient(180deg, var(--metal), #000); padding: 15px; border-bottom: 3px solid var(--rojo); box-shadow: 0 5px 15px rgba(229, 9, 20, 0.2); }
+        .container { max-width: 1000px; margin: 20px auto; padding: 20px; }
+        
+        #remoteVideo { width: 100%; border-radius: 10px; border: 2px solid var(--metal); background: #000; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        
+        .panel { background: #1a1a1a; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--rojo); }
+        input { padding: 12px; background: #000; border: 1px solid var(--metal); color: white; border-radius: 4px; width: 250px; }
+        button { padding: 12px 25px; background: linear-gradient(180deg, var(--rojo), #800000); color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; transition: 0.3s; text-transform: uppercase; }
+        button:hover { transform: scale(1.05); box-shadow: 0 0 15px var(--rojo); }
+        .id-tag { color: var(--rojo); font-weight: bold; font-size: 1.3em; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>METALSTREAM LIVE P2P 🔴</h1>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <p>TU ID: <span id="my-id" class="id-tag">Cargando...</span></p>
+            <input type="text" id="peer-id-input" placeholder="ID de tu amigo">
+            <button onclick="startSharing()">COMPARTIR MI PANTALLA</button>
+        </div>
+
+        <div id="video-wrapper">
+            <h3 id="status-text">Esperando señal...</h3>
+            <video id="remoteVideo" autoplay playsinline controls></video>
+        </div>
+    </div>
+
+    <script>
+        const peer = new Peer(); 
+        let currentCall;
+
+        // Mostrar tu ID
+        peer.on('open', (id) => {
+            document.getElementById('my-id').innerText = id;
+        });
+
+        // ESCUCHAR LLAMADA (El que recibe la pantalla)
+        peer.on('call', (call) => {
+            document.getElementById('status-text').innerText = "¡Recibiendo transmisión!";
+            call.answer(); // Contestar la llamada
+            call.on('stream', (remoteStream) => {
+                document.getElementById('remoteVideo').srcObject = remoteStream;
+            });
+        });
+
+        // INICIAR TRANSMISIÓN (El que comparte la pantalla)
+        async function startSharing() {
+            const friendId = document.getElementById('peer-id-input').value;
+            if (!friendId) return alert("Primero pega el ID de tu amigo");
+
+            try {
+                // CAPTURAR PANTALLA
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { cursor: "always" },
+                    audio: true // Intenta capturar el audio del sistema
+                });
+
+                document.getElementById('status-text').innerText = "Transmitiendo...";
+                document.getElementById('remoteVideo').srcObject = stream;
+
+                // Enviar el flujo de video al amigo
+                const call = peer.call(friendId, stream);
+                
+            } catch (err) {
+                console.error("Error al compartir: " + err);
+                alert("No se pudo compartir la pantalla. Asegúrate de dar permisos.");
+            }
+        }
+
+        // Manejo de errores
+        peer.on('error', (err) => {
+            alert("Error: " + err.type);
+        });
+    </script>
+</body>
+</html>
